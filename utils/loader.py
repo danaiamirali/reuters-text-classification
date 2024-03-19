@@ -145,7 +145,7 @@ def load_data(directory: str) -> list[dict]:
         
     return docs
 
-def get_labels(category: str) -> list[str]:
+def get_labels(category: str, path:str = None) -> list[str]:
     """
     Gets all possible labels for a given category.
 
@@ -155,7 +155,7 @@ def get_labels(category: str) -> list[str]:
     Returns:
         list[str]: A list of all possible labels for the given category.
     """
-    file = f"../data/all-{category}-strings.lc.txt"
+    file = f"../data/all-{category}-strings.lc.txt" if path is None else f"{path}/all-{category}-strings.lc.txt"
     try:
         with open(file, "r") as f:
             return [line.strip() for line in f.readlines()]
