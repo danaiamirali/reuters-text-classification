@@ -82,23 +82,23 @@ def load_file(file_path: str) -> list[dict]:
         for element in reuters_elements:
             title = element.find("title")
             body = element.find("body")
-            topics = element.find("topics")
-            places = element.find("places")
-            people = element.find("people")
-            orgs = element.find("orgs")
-            exchanges = element.find("exchanges")
-            companies = element.find("companies")
+            topics = [topic.text for topic in element.find("topics").find_all("d")]
+            places = [place.text for place in element.find("places").find_all("d")]
+            people = [person.text for person in element.find("people").find_all("d")]
+            orgs = [org.text for org in element.find("orgs").find_all("d")]
+            exchanges = [exchange.text for exchange in element.find("exchanges").find_all("d")]
+            companies = [company.text for company in element.find("companies").find_all("d")]
 
             # Create dictionary for each document, and append to the list
             document = {
-                "title": title.text if title else None,
+                "title": preprocess_text(title.text) if title else None,
                 "body": preprocess_text(body.text) if body else None,
-                "topics": topics.text if topics else None,
-                "places": places.text if places else None,
-                "people": people.text if people else None,
-                "orgs": orgs.text if orgs else None,
-                "exchanges": exchanges.text if exchanges else None,
-                "companies": companies.text if companies else None
+                "topics": topics if len(topics) > 0 else None,
+                "places": places if len(places) > 0 else None,
+                "people": people if len(people) > 0 else None,
+                "orgs": orgs if len(orgs) > 0 else None,
+                "exchanges": exchanges if len(exchanges) > 0 else None,
+                "companies": companies if len(companies) > 0 else None
             }
 
             # print(document)
@@ -140,20 +140,6 @@ if __name__ == "__main__":
     # Run this file to test the loader
     file = "data/reut2-000.sgm"
     output_file = f"{file}-load.txt"
-
-    # Test preprocessing
-    # soup = BeautifulSoup(file, "html.parser")
-    # sample_text = soup.find_all("reuters")[0].find("body").text
-    # print(
-    #     """
-    #     Before preprocessing: 
-    #     {text}
-    #     After preprocessing:
-    #     {preprocessed_text}
-    #     """.format(
-    #         text=sample_text, preprocessed_text=preprocess_text(sample_text)
-    #     )
-    # )
 
     # Test loading data
     print(f"Loading {file}...")
