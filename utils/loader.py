@@ -106,6 +106,15 @@ def load_file(file_path: str) -> list[dict]:
             documents.append(document)
         
         return documents
+    
+def load_files(files: list[str]) -> list[dict]:
+    """
+    Load the REUTERS documents from a list of SGM files.
+    """
+    documents = []
+    for file in files:
+        documents.extend(load_file(file))
+    return documents
 
 def load_data(directory: str) -> list[dict]:
     """
