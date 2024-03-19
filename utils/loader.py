@@ -44,7 +44,7 @@ def preprocess_text(text: str) -> str:
     return text
 
 
-def load_data(file_path: str) -> list[dict]:
+def load_file(file_path: str) -> list[dict]:
     """
     Load the REUTERS documents from an individual SGM file.
 
@@ -107,7 +107,7 @@ def load_data(file_path: str) -> list[dict]:
         
         return documents
 
-def load_all_data(directory: str) -> list[dict]:
+def load_data(directory: str) -> list[dict]:
     """
     Load all the REUTERS documents from the SGM files in the given directory.
 
@@ -131,7 +131,7 @@ def load_all_data(directory: str) -> list[dict]:
     for files in os.listdir(directory):
         if files.endswith(".sgm"):
             file_path = os.path.join(directory, files)
-            documents = load_data(file_path)
+            documents = load_file(file_path)
             docs.extend(documents)
         
     return docs
@@ -158,6 +158,6 @@ if __name__ == "__main__":
     # Test loading data
     print(f"Loading {file}...")
     with open(output_file, "w") as f:
-        for doc in load_data(file):
+        for doc in load_file(file):
             f.write(str(doc) + "\n---\n")
     
