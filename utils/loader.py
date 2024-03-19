@@ -145,6 +145,24 @@ def load_data(directory: str) -> list[dict]:
         
     return docs
 
+def get_labels(category: str) -> list[str]:
+    """
+    Gets all possible labels for a given category.
+
+    Args:
+        label (str): The category to get labels for.
+    
+    Returns:
+        list[str]: A list of all possible labels for the given category.
+    """
+    file = f"../data/all-{category}-strings.lc.txt"
+    try:
+        with open(file, "r") as f:
+            return [line.strip() for line in f.readlines()]
+    except:
+        print(f"Error reading file: {file}")
+        return None
+
 if __name__ == "__main__":
     # Run this file to test the loader
     file = "data/reut2-000.sgm"
