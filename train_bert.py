@@ -2,6 +2,7 @@ import pandas as pd
 from utils import loader
 from models import bert
 from sklearn.preprocessing import MultiLabelBinarizer
+import torch
 
 if __name__ == "__main__":
 
@@ -40,5 +41,6 @@ if __name__ == "__main__":
     model = bert.train_model(df, MAX_LEN, TRAIN_BATCH_SIZE, VALID_BATCH_SIZE, EPOCHS, LEARNING_RATE, NUM_LABELS=NUM_LABELS)
     print("Model trained.")
 
-    model.save_pretrained("trained_models/bert")
-    print("Model saved to trained_models/bert")
+    PATH = f"trained_models/BERT-cased-{EPOCHS}"
+    torch.save(model.state_dict(), PATH)
+    print(f"Model saved to {PATH}")
