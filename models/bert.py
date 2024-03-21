@@ -64,12 +64,12 @@ class CustomDataset(Dataset):
             'targets': torch.tensor(self.targets[index], dtype=torch.float)
         }
     
-# Creating the customized model, by adding a drop out and a dense layer on top of distil bert to get the final output for the model. 
+# Creating the customized model, by adding a drop out and a dense layer on top of bert to get the final output for the model. 
 
 class BERTClass(torch.nn.Module):
     def __init__(self, NUM_LABELS):
         super(BERTClass, self).__init__()
-        self.l1 = BertModel.from_pretrained('bert-base-uncased')
+        self.l1 = BertModel.from_pretrained('bert-base-cased')
         self.l2 = torch.nn.Dropout(0.3)
         self.l3 = torch.nn.Linear(768, NUM_LABELS)
     
@@ -170,7 +170,7 @@ def train_model(df: pd.DataFrame,
                 token_type_ids = token_type_ids.squeeze(1)
                 # print("val output shape1", ids.shape, mask.shape, token_type_ids.shape, targets.shape)
                 outputs = model(ids, mask, token_type_ids)
-                # print("val output shape2", outputs.shape)
+
                 fin_targets.extend(targets.cpu().detach().numpy().tolist())
                 fin_outputs.extend(torch.sigmoid(outputs).cpu().detach().numpy().tolist())
         return fin_outputs, fin_targets
@@ -185,11 +185,15 @@ def train_model(df: pd.DataFrame,
         outputs, targets = validation(epoch)
         outputs = np.array(outputs) >= 0.5
         accuracy = metrics.accuracy_score(targets, outputs)
-        f1_score_micro = metrics.f1_score(targets, outputs, average='micro')
-        f1_score_macro = metrics.f1_score(targets, outputs, average='macro')
+        # balanced_accuracy = metrics.balanced_accuracy_score(targets, outputs)
+        f1_score_micro = metrics.f1_score(targets, outputs, average='micro', zero_division=np.nan)
+        f1_score_macro = metrics.f1_score(targets, outputs, average='macro', zero_division=np.nan)
+        clf_report = metrics.classification_report(targets, outputs, zero_division=np.nan)
         print(f"Accuracy Score = {accuracy}")
+        # print(f"Balanced Accuracy Score = {balanced_accuracy}")
         print(f"F1 Score (Micro) = {f1_score_micro}")
         print(f"F1 Score (Macro) = {f1_score_macro}")
+        print(clf_report)
 
         torch.save(model.state_dict(), f"checkpoints/BERT-cased-{epoch}")
 

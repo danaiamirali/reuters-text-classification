@@ -3,15 +3,15 @@ from utils import loader
 from models import bert
 from sklearn.preprocessing import MultiLabelBinarizer
 import torch
+import os
 
 if __name__ == "__main__":
 
     print("Loading data...")
-    # data = loader.load_data("./data/")
-    f = 'data/{fn}.sgm'
-    files = [f.format(fn='reut2-00'+str(i)) for i in range(2)]
-
-    data = loader.load_files(files)
+    data = loader.load_data("./data/")
+    # f = 'data/{fn}.sgm'
+    # files = [f.format(fn='reut2-00'+str(i)) for i in range(3)]
+    # data = loader.load_files(files)
     print(f"Loaded {len(data)} documents.")
 
     df = pd.DataFrame(data)
@@ -31,16 +31,20 @@ if __name__ == "__main__":
     df["topics"] = list(topics)
 
     MAX_LEN = 200
-    TRAIN_BATCH_SIZE = 32
-    VALID_BATCH_SIZE = 32
+    TRAIN_BATCH_SIZE = 256
+    VALID_BATCH_SIZE = 256
     EPOCHS = 3
     LEARNING_RATE = 1e-05
     NUM_LABELS = len(mlb.classes_)
 
     print("Training model...")
-    model = bert.train_model(df, MAX_LEN, TRAIN_BATCH_SIZE, VALID_BATCH_SIZE, EPOCHS, LEARNING_RATE, NUM_LABELS=NUM_LABELS)
+    if not os.path.exists("checkpoint"):
+        os.makedirs("checkpoint")
+    model = bert.train_model(df, MAX_LEN, TRAIN_BATCH_SIZE, VALID_BATCH_SIZE, EPOCHS, LEARNING_RATE, TRAIN_SIZE=0.7, NUM_LABELS=NUM_LABELS)
     print("Model trained.")
 
     PATH = f"trained_models/BERT-cased-{EPOCHS}"
+    if not os.path.exists("trained_models"):
+        os.makedirs("trained_models")
     torch.save(model.state_dict(), PATH)
     print(f"Model saved to {PATH}")
