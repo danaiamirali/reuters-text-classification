@@ -191,6 +191,6 @@ def train_model(df: pd.DataFrame,
         print(f"F1 Score (Micro) = {f1_score_micro}")
         print(f"F1 Score (Macro) = {f1_score_macro}")
 
-        torch.save(model.state_dict(), "checkpoints/BERT-cased-{epoch}")
+        torch.save(model.state_dict(), f"checkpoints/BERT-cased-{epoch}")
 
     return model
