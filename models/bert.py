@@ -168,9 +168,9 @@ def train_model(df: pd.DataFrame,
                 ids = ids.squeeze(1)
                 mask = mask.squeeze(1)
                 token_type_ids = token_type_ids.squeeze(1)
-                print("val output shape1", ids.shape, mask.shape, token_type_ids.shape, targets.shape)
+                # print("val output shape1", ids.shape, mask.shape, token_type_ids.shape, targets.shape)
                 outputs = model(ids, mask, token_type_ids)
-                print("val output shape2", outputs.shape)
+                # print("val output shape2", outputs.shape)
                 fin_targets.extend(targets.cpu().detach().numpy().tolist())
                 fin_outputs.extend(torch.sigmoid(outputs).cpu().detach().numpy().tolist())
         return fin_outputs, fin_targets
