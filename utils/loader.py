@@ -12,6 +12,8 @@ from nltk.corpus import stopwords
 
 nltk.download("stopwords")
 
+import threading
+
 def preprocess_text(text: str) -> str:
     """
     Applies basic preprocessing to the given text, including:
@@ -63,49 +65,47 @@ def load_file(file_path: str) -> list[dict]:
             - exchanges: The stock exchanges mentioned in the document.
             - companies: The companies mentioned in the document.
     """
-    data = []
     if file_path.endswith(".sgm"):
         try:
             with open(file_path, "r", encoding="utf8") as f:
-                data.append(f.read())
+                doc = f.read()
         except:
             print(f"Error reading file: {file_path}")
             return []
 
     documents = []
-    for doc in data:
-        soup = BeautifulSoup(doc, "html.parser")
-        # print(soup.prettify())
-        # print(soup.find_all("reuters"))
-        reuters_elements = soup.find_all("reuters")
+    soup = BeautifulSoup(doc, "html.parser")
+    # print(soup.prettify())
+    # print(soup.find_all("reuters"))
+    reuters_elements = soup.find_all("reuters")
 
-        for element in reuters_elements:
-            title = element.find("title")
-            body = element.find("body")
-            topics = [topic.text for topic in element.find("topics").find_all("d")]
-            places = [place.text for place in element.find("places").find_all("d")]
-            people = [person.text for person in element.find("people").find_all("d")]
-            orgs = [org.text for org in element.find("orgs").find_all("d")]
-            exchanges = [exchange.text for exchange in element.find("exchanges").find_all("d")]
-            companies = [company.text for company in element.find("companies").find_all("d")]
+    for element in reuters_elements:
+        title = element.find("title")
+        body = element.find("body")
+        topics = [topic.text for topic in element.find("topics").find_all("d")]
+        places = [place.text for place in element.find("places").find_all("d")]
+        people = [person.text for person in element.find("people").find_all("d")]
+        orgs = [org.text for org in element.find("orgs").find_all("d")]
+        exchanges = [exchange.text for exchange in element.find("exchanges").find_all("d")]
+        companies = [company.text for company in element.find("companies").find_all("d")]
 
-            # Create dictionary for each document, and append to the list
-            document = {
-                "title": preprocess_text(title.text) if title else None,
-                "body": preprocess_text(body.text) if body else None,
-                "topics": topics if len(topics) > 0 else None,
-                "places": places if len(places) > 0 else None,
-                "people": people if len(people) > 0 else None,
-                "orgs": orgs if len(orgs) > 0 else None,
-                "exchanges": exchanges if len(exchanges) > 0 else None,
-                "companies": companies if len(companies) > 0 else None
-            }
+        # Create dictionary for each document, and append to the list
+        document = {
+            "title": preprocess_text(title.text) if title else None,
+            "body": preprocess_text(body.text) if body else None,
+            "topics": topics if len(topics) > 0 else None,
+            "places": places if len(places) > 0 else None,
+            "people": people if len(people) > 0 else None,
+            "orgs": orgs if len(orgs) > 0 else None,
+            "exchanges": exchanges if len(exchanges) > 0 else None,
+            "companies": companies if len(companies) > 0 else None
+        }
 
             # print(document)
 
-            documents.append(document)
-        
-        return documents
+        documents.append(document)
+    
+    return documents
     
 def load_files(files: list[str]) -> list[dict]:
     """
@@ -116,7 +116,7 @@ def load_files(files: list[str]) -> list[dict]:
         documents.extend(load_file(file))
     return documents
 
-def load_data(directory: str) -> list[dict]:
+def load_data(directory: str, count: int = None) -> list[dict]:
     """
     Load all the REUTERS documents from the SGM files in the given directory.
 
@@ -136,12 +136,17 @@ def load_data(directory: str) -> list[dict]:
             - companies: The companies mentioned in the document.
     """
     docs = []
-
+    i = 0
     for files in os.listdir(directory):
-        if files.endswith(".sgm"):
+        if files.endswith(".sgm") and (count is None or i < count):
             file_path = os.path.join(directory, files)
+            print(f"Loading {file_path}...")
             documents = load_file(file_path)
             docs.extend(documents)
+            print(f"Loaded {file_path}.")
+            i += 1
+        
+    print(f"Loaded {len(docs)} documents.")
         
     return docs
 
