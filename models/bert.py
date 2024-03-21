@@ -75,11 +75,11 @@ class BERTClass(torch.nn.Module):
     
     def forward(self, ids, mask, token_type_ids):
         _, output_1= self.l1(ids, attention_mask = mask, token_type_ids = token_type_ids, return_dict=False)
-        print(output_1.shape)
+        # print(output_1.shape)
         output_2 = self.l2(output_1)
-        print(output_2.shape)
+        # print(output_2.shape)
         output = self.l3(output_2)
-        print(output.shape)
+        # print(output.shape)
         return output
 
 def train_model(df: pd.DataFrame, 
