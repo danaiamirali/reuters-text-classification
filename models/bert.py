@@ -1,11 +1,14 @@
 from transformers import BertTokenizer, BertModel
 from sklearn import metrics
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
+from .helpers import CustomDataset, preprocess
+from .helpers import freeze_model as freeze_bert
 import regex as re
 import pandas as pd
 import numpy as np
 from torch import cuda
+from sklearn.model_selection import train_test_split
 
 device = 'cuda' if cuda.is_available() else 'cpu'
 
@@ -16,54 +19,8 @@ The model will perform multi-label classification,
 predicting the topics of each document.
 
 """
-def preprocess(data: str) -> torch.Tensor:
-    if not isinstance(data, str):
-        print(type(data))
-    # we will keep casing
-    # replace numbers
-    data = re.sub(r"\d+", "<NUM>", data)
-    return data
-
-class CustomDataset(Dataset):
-
-    def __init__(self, dataframe, tokenizer, max_len):
-        self.tokenizer = tokenizer
-        self.data = dataframe
-        self.body = dataframe.body
-        self.targets = self.data.topics
-        self.max_len = max_len
-
-    def __len__(self):
-        return len(self.body)
-
-    def __getitem__(self, index):
-        body = str(self.body[index])
-        body = " ".join(body.split())
-
-        inputs = self.tokenizer.encode_plus(
-            body,
-            None,
-            add_special_tokens=True,
-            max_length=self.max_len,
-            truncation=True,
-            padding="max_length",
-            return_token_type_ids=True,
-            return_attention_mask=True,
-            return_tensors='pt',
-        )
-
-        ids = inputs['input_ids']
-        mask = inputs['attention_mask']
-        token_type_ids = inputs["token_type_ids"]
 
 
-        return {
-            'ids': torch.tensor(ids, dtype=torch.long),
-            'mask': torch.tensor(mask, dtype=torch.long),
-            'token_type_ids': torch.tensor(token_type_ids, dtype=torch.long),
-            'targets': torch.tensor(self.targets[index], dtype=torch.float)
-        }
-    
 # Creating the customized model, by adding a drop out and a dense layer on top of bert to get the final output for the model. 
 
 class BERTClass(torch.nn.Module):
@@ -89,7 +46,8 @@ def train_model(df: pd.DataFrame,
                 EPOCHS: int = 1,
                 LEARNING_RATE: float = 1e-05,
                 TRAIN_SIZE: float = 0.8,
-                NUM_LABELS: int = None
+                NUM_LABELS: int = None,
+                FREEZE_BERT: bool = True
     ) -> BERTClass:
     """
     Main driver function to train the BERT model.
@@ -105,11 +63,14 @@ def train_model(df: pd.DataFrame,
 
     model = BERTClass(NUM_LABELS)
     model.to(device)
+
+    if FREEZE_BERT:
+        model = freeze_bert(model)
+        print("BERT model frozen.")
+
     tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
 
-    train_dataset=df.sample(frac=TRAIN_SIZE,random_state=200)
-    test_dataset=df.drop(train_dataset.index).reset_index(drop=True)
-    train_dataset = train_dataset.reset_index(drop=True)
+    train_dataset, test_dataset = train_test_split(df, train_size=TRAIN_SIZE, random_state=42, stratify=df["topics"])
 
 
     print("FULL Dataset: {}".format(df.shape))

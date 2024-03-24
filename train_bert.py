@@ -1,6 +1,7 @@
 import pandas as pd
 from utils import loader
 from models import bert
+from models.helpers import preprocess
 from sklearn.preprocessing import MultiLabelBinarizer
 import torch
 import os
@@ -8,10 +9,10 @@ import os
 if __name__ == "__main__":
 
     print("Loading data...")
-    data = loader.load_data("./data/")
-    # f = 'data/{fn}.sgm'
-    # files = [f.format(fn='reut2-00'+str(i)) for i in range(3)]
-    # data = loader.load_files(files)
+    # data = loader.load_data("./data/")
+    f = 'data/{fn}.sgm'
+    files = [f.format(fn='reut2-00'+str(i)) for i in range(10)]
+    data = loader.load_files(files)
     print(f"Loaded {len(data)} documents.")
 
     df = pd.DataFrame(data)
@@ -19,7 +20,7 @@ if __name__ == "__main__":
     df = df[["title", "body", "topics"]]
     df = df.dropna()
 
-    df["body"] = (df["title"] + df["body"]).apply(bert.preprocess)
+    df["body"] = (df["title"] + df["body"]).apply(preprocess)
     df = df.drop("title", axis=1)
 
     # load all the topics
@@ -38,9 +39,9 @@ if __name__ == "__main__":
     NUM_LABELS = len(mlb.classes_)
 
     print("Training model...")
-    if not os.path.exists("checkpoint"):
-        os.makedirs("checkpoint")
-    model = bert.train_model(df, MAX_LEN, TRAIN_BATCH_SIZE, VALID_BATCH_SIZE, EPOCHS, LEARNING_RATE, TRAIN_SIZE=0.7, NUM_LABELS=NUM_LABELS)
+    if not os.path.exists("checkpoints"):
+        os.makedirs("checkpoints")
+    model = bert.train_model(df, MAX_LEN, TRAIN_BATCH_SIZE, VALID_BATCH_SIZE, EPOCHS, LEARNING_RATE, TRAIN_SIZE=0.7, NUM_LABELS=NUM_LABELS, FREEZE_BERT=True)
     print("Model trained.")
 
     PATH = f"trained_models/BERT-cased-{EPOCHS}"
