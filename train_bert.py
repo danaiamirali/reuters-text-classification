@@ -13,7 +13,7 @@ if __name__ == "__main__":
     print("Loading data...")
     # data = loader.load_data("./data/")
     f = 'data/{fn}.sgm'
-    files = [f.format(fn='reut2-00'+str(i)) for i in range(1)]
+    files = [f.format(fn='reut2-00'+str(i)) for i in range(15)]
     data = loader.load_files(files)
     print(f"Loaded {len(data)} documents.")
 
@@ -42,13 +42,8 @@ if __name__ == "__main__":
     train_topics = mlb.transform(train_dataset["topics"].to_list())
     test_topics = mlb.transform(test_dataset["topics"].to_list())
 
-    print("Train topics:", train_topics)
-    print("First topic binarized:", train_topics[0])
-
     train_dataset["topics"] = list(train_topics)
     test_dataset["topics"] = list(test_topics)
-
-    print(train_dataset.head())
 
     MAX_LEN = 200
     TRAIN_BATCH_SIZE = 256
