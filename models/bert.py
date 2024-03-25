@@ -39,7 +39,8 @@ class BERTClass(torch.nn.Module):
         # print(output.shape)
         return output
 
-def train_model(df: pd.DataFrame, 
+def train_model(train_dataset: pd.DataFrame, 
+                test_dataset: pd.DataFrame,
                 MAX_LEN: int = 200,
                 TRAIN_BATCH_SIZE: int = 8,
                 VALID_BATCH_SIZE: int = 4,
@@ -58,7 +59,7 @@ def train_model(df: pd.DataFrame,
     """
 
     if NUM_LABELS is None:
-        NUM_LABELS = df["topics"].shape[1]
+        NUM_LABELS = train_dataset["topics"].shape[1]
         print("Inferred NUM_LABELS from dataframe as: ", NUM_LABELS)
 
     model = BERTClass(NUM_LABELS)
@@ -70,15 +71,12 @@ def train_model(df: pd.DataFrame,
 
     tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
 
-    train_dataset, test_dataset = train_test_split(df, train_size=TRAIN_SIZE, random_state=42, stratify=df["topics"])
 
-
-    print("FULL Dataset: {}".format(df.shape))
     print("TRAIN Dataset: {}".format(train_dataset.shape))
     print("TEST Dataset: {}".format(test_dataset.shape))
 
     training_set = CustomDataset(train_dataset, tokenizer, MAX_LEN)
-    testing_set = CustomDataset(test_dataset, tokenizer, MAX_LEN)
+    testing_set  = CustomDataset(test_dataset, tokenizer, MAX_LEN)
 
     train_params = {'batch_size': TRAIN_BATCH_SIZE,
                 'shuffle': True,
@@ -106,13 +104,14 @@ def train_model(df: pd.DataFrame,
             # print("train output shape1", ids.shape, mask.shape, token_type_ids.shape, targets.shape)
             outputs = model(ids, mask, token_type_ids)
             # print("train output shape2", outputs.shape)
+            outputs = np.array(outputs) >= 0.5
 
             optimizer.zero_grad()
+
             loss = loss_fn(outputs, targets)
             if _%5000==0:
                 print(f'Epoch: {epoch}, Loss:  {loss.item()}')
             
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
@@ -141,6 +140,7 @@ def train_model(df: pd.DataFrame,
     optimizer = torch.optim.Adam(params =  model.parameters(), lr=LEARNING_RATE)
 
     for epoch in range(EPOCHS):
+        print(f"Epoch {epoch}...")
         train(epoch)
 
         outputs, targets = validation(epoch)
@@ -150,10 +150,10 @@ def train_model(df: pd.DataFrame,
         f1_score_micro = metrics.f1_score(targets, outputs, average='micro', zero_division=np.nan)
         f1_score_macro = metrics.f1_score(targets, outputs, average='macro', zero_division=np.nan)
         clf_report = metrics.classification_report(targets, outputs, zero_division=np.nan)
-        print(f"Accuracy Score = {accuracy}")
+        print(f"Validation Accuracy Score = {accuracy}")
         # print(f"Balanced Accuracy Score = {balanced_accuracy}")
-        print(f"F1 Score (Micro) = {f1_score_micro}")
-        print(f"F1 Score (Macro) = {f1_score_macro}")
+        print(f"Validation F1 Score (Micro) = {f1_score_micro}")
+        print(f"Validation F1 Score (Macro) = {f1_score_macro}")
         print(clf_report)
 
         torch.save(model.state_dict(), f"checkpoints/BERT-cased-{epoch}")

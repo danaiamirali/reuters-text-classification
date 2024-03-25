@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 import regex as re
+import numpy as np
 
 class CustomDataset(Dataset):
 
@@ -8,14 +9,14 @@ class CustomDataset(Dataset):
         self.tokenizer = tokenizer
         self.data = dataframe
         self.body = dataframe.body
-        self.targets = self.data.topics
+        self.targets = np.array(dataframe.topics)
         self.max_len = max_len
 
     def __len__(self):
         return len(self.body)
 
     def __getitem__(self, index):
-        body = str(self.body[index])
+        body = str(self.body.iloc[index])
         body = " ".join(body.split())
 
         inputs = self.tokenizer.encode_plus(
