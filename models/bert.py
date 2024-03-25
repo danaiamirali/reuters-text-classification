@@ -96,7 +96,7 @@ def train_model(train_dataset: pd.DataFrame,
             ids = data['ids'].to(device, dtype = torch.long)
             mask = data['mask'].to(device, dtype = torch.long)
             token_type_ids = data['token_type_ids'].to(device, dtype = torch.long)
-            print("Targets:", data['targets'])
+            # print("Targets:", data['targets'])
             targets = data['targets'].to(device, dtype = torch.float)
             ids = ids.squeeze(1)
             mask = mask.squeeze(1)
@@ -106,8 +106,8 @@ def train_model(train_dataset: pd.DataFrame,
         
             optimizer.zero_grad()
 
-            print(f"Output shape: {outputs.shape}")
-            print(f"Target shape: {targets.shape}")
+            # print(f"Output shape: {outputs.shape}")
+            # print(f"Target shape: {targets.shape}")
 
             # This should not modify anything but confirm the expectation
             assert outputs.shape == targets.shape, "Mismatch in output and target shapes"
