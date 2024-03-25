@@ -9,7 +9,7 @@ class CustomDataset(Dataset):
         self.tokenizer = tokenizer
         self.data = dataframe
         self.body = dataframe.body
-        self.targets = np.array(dataframe.topics)
+        self.targets = np.array([topic for topic in dataframe.topics])
         self.max_len = max_len
 
     def __len__(self):

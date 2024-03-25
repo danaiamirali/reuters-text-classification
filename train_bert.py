@@ -11,10 +11,10 @@ import numpy as np
 if __name__ == "__main__":
 
     print("Loading data...")
-    data = loader.load_data("./data/")
-    # f = 'data/{fn}.sgm'
-    # files = [f.format(fn='reut2-00'+str(i)) for i in range(5)]
-    # data = loader.load_files(files)
+    # data = loader.load_data("./data/")
+    f = 'data/{fn}.sgm'
+    files = [f.format(fn='reut2-00'+str(i)) for i in range(1)]
+    data = loader.load_files(files)
     print(f"Loaded {len(data)} documents.")
 
     df = pd.DataFrame(data)
@@ -33,6 +33,8 @@ if __name__ == "__main__":
     print(f"Filtered {old_len - new_len} records.")
     train_dataset, test_dataset = train_test_split(df, train_size=0.7, random_state=42, shuffle=True, stratify=df["topics"])
 
+    print(df.head())
+
     # load all the topics
     mlb = MultiLabelBinarizer()
     mlb.fit(df["topics"].to_list())
@@ -40,8 +42,13 @@ if __name__ == "__main__":
     train_topics = mlb.transform(train_dataset["topics"].to_list())
     test_topics = mlb.transform(test_dataset["topics"].to_list())
 
-    train_dataset["topics"] = np.array(train_topics)
-    test_dataset["topics"] = np.array(test_topics)
+    print("Train topics:", train_topics)
+    print("First topic binarized:", train_topics[0])
+
+    train_dataset["topics"] = list(train_topics)
+    test_dataset["topics"] = list(test_topics)
+
+    print(train_dataset.head())
 
     MAX_LEN = 200
     TRAIN_BATCH_SIZE = 256

@@ -71,7 +71,6 @@ def train_model(train_dataset: pd.DataFrame,
 
     tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
 
-
     print("TRAIN Dataset: {}".format(train_dataset.shape))
     print("TEST Dataset: {}".format(test_dataset.shape))
 
@@ -97,16 +96,21 @@ def train_model(train_dataset: pd.DataFrame,
             ids = data['ids'].to(device, dtype = torch.long)
             mask = data['mask'].to(device, dtype = torch.long)
             token_type_ids = data['token_type_ids'].to(device, dtype = torch.long)
+            print("Targets:", data['targets'])
             targets = data['targets'].to(device, dtype = torch.float)
             ids = ids.squeeze(1)
             mask = mask.squeeze(1)
             token_type_ids = token_type_ids.squeeze(1)
-            # print("train output shape1", ids.shape, mask.shape, token_type_ids.shape, targets.shape)
+            
             outputs = model(ids, mask, token_type_ids)
-            # print("train output shape2", outputs.shape)
-            outputs = np.array(outputs) >= 0.5
-
+        
             optimizer.zero_grad()
+
+            print(f"Output shape: {outputs.shape}")
+            print(f"Target shape: {targets.shape}")
+
+            # This should not modify anything but confirm the expectation
+            assert outputs.shape == targets.shape, "Mismatch in output and target shapes"
 
             loss = loss_fn(outputs, targets)
             if _%5000==0:
@@ -137,6 +141,7 @@ def train_model(train_dataset: pd.DataFrame,
     
     def loss_fn(outputs, targets):
         return torch.nn.BCEWithLogitsLoss()(outputs, targets)
+
     optimizer = torch.optim.Adam(params =  model.parameters(), lr=LEARNING_RATE)
 
     for epoch in range(EPOCHS):
