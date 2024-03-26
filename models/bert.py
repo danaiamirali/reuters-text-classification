@@ -20,6 +20,8 @@ predicting the topics of each document.
 
 """
 
+def hamming_score(y_true, y_pred):
+    return ((y_true & y_pred).sum(axis=1) / (y_true | y_pred).sum(axis=1)).mean()
 
 # Creating the customized model, by adding a drop out and a dense layer on top of bert to get the final output for the model. 
 
@@ -83,7 +85,7 @@ def train_model(train_dataset: pd.DataFrame,
                 }
 
     test_params = {'batch_size': VALID_BATCH_SIZE,
-                    'shuffle': True,
+                    'shuffle': False,
                     'num_workers': 0
                     }
 
@@ -96,12 +98,10 @@ def train_model(train_dataset: pd.DataFrame,
             ids = data['ids'].to(device, dtype = torch.long)
             mask = data['mask'].to(device, dtype = torch.long)
             token_type_ids = data['token_type_ids'].to(device, dtype = torch.long)
-            # print("Targets:", data['targets'])
             targets = data['targets'].to(device, dtype = torch.float)
             ids = ids.squeeze(1)
             mask = mask.squeeze(1)
             token_type_ids = token_type_ids.squeeze(1)
-            
             outputs = model(ids, mask, token_type_ids)
         
             optimizer.zero_grad()
@@ -147,13 +147,19 @@ def train_model(train_dataset: pd.DataFrame,
 
         outputs, targets = validation(epoch)
         outputs = np.array(outputs) >= THRESHOLD
+        print("Number of labels predicted:", np.sum(outputs))
         accuracy = metrics.accuracy_score(targets, outputs)
-        # balanced_accuracy = metrics.balanced_accuracy_score(targets, outputs)
         f1_score_micro = metrics.f1_score(targets, outputs, average='micro', zero_division=np.nan)
         f1_score_macro = metrics.f1_score(targets, outputs, average='macro', zero_division=np.nan)
         clf_report = metrics.classification_report(targets, outputs, zero_division=np.nan)
         print(f"Validation Accuracy Score = {accuracy}")
-        # print(f"Balanced Accuracy Score = {balanced_accuracy}")
+        
+        try: 
+            hs = hamming_score(targets, outputs)
+            print(f"Validation Hamming Score = {hs}")
+        except:
+            pass
+        
         print(f"Validation F1 Score (Micro) = {f1_score_micro}")
         print(f"Validation F1 Score (Macro) = {f1_score_macro}")
         print(clf_report)

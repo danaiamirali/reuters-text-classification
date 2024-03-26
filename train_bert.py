@@ -14,7 +14,7 @@ if __name__ == "__main__":
     print("Loading data...")
     data = loader.load_data("./data/")
     # f = 'data/{fn}.sgm'
-    # files = [f.format(fn='reut2-00'+str(i)) for i in range(15)]
+    # files = [f.format(fn='reut2-00'+str(i)) for i in range(10)]
     # data = loader.load_files(files)
     print(f"Loaded {len(data)} documents.")
 
@@ -55,7 +55,10 @@ if __name__ == "__main__":
     print("Training model...")
     if not os.path.exists("checkpoints"):
         os.makedirs("checkpoints")
-    model = bert.train_model(train_dataset, test_dataset, MAX_LEN, TRAIN_BATCH_SIZE, VALID_BATCH_SIZE, EPOCHS, LEARNING_RATE, TRAIN_SIZE=0.7, NUM_LABELS=NUM_LABELS, FREEZE_BERT=True)
+    model = bert.train_model(train_dataset, test_dataset, 
+                            MAX_LEN, TRAIN_BATCH_SIZE, VALID_BATCH_SIZE, 
+                            EPOCHS, LEARNING_RATE, TRAIN_SIZE=0.7, NUM_LABELS=NUM_LABELS, 
+                            THRESHOLD=0.3, FREEZE_BERT=True)
     print("Model trained.")
 
     PATH = f"trained_models/BERT-cased-{EPOCHS}"
