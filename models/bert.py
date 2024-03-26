@@ -2,9 +2,7 @@ from transformers import BertTokenizer, BertModel
 from sklearn import metrics
 import torch
 from torch.utils.data import DataLoader
-from .helpers import CustomDataset, preprocess
 from .helpers import freeze_model as freeze_bert
-import regex as re
 import pandas as pd
 import numpy as np
 from torch import cuda
@@ -20,8 +18,6 @@ predicting the topics of each document.
 
 """
 
-def hamming_score(y_true, y_pred):
-    return ((y_true & y_pred).sum(axis=1) / (y_true | y_pred).sum(axis=1)).mean()
 
 # Creating the customized model, by adding a drop out and a dense layer on top of bert to get the final output for the model. 
 
@@ -29,68 +25,38 @@ class BERTClass(torch.nn.Module):
     def __init__(self, NUM_LABELS):
         super(BERTClass, self).__init__()
         self.l1 = BertModel.from_pretrained('bert-base-cased')
-        self.dropout = torch.nn.Dropout(0.3)
-        self.l2 = torch.nn.Linear(768, NUM_LABELS)
+        self.l2 = torch.nn.Dropout(0.3)
+        self.l3 = torch.nn.Linear(768, NUM_LABELS)
     
     def forward(self, ids, mask, token_type_ids):
         _, output_1= self.l1(ids, attention_mask = mask, token_type_ids = token_type_ids, return_dict=False)
         # print(output_1.shape)
-        output_2 = self.dropout(output_1)
+        output_2 = self.l2(output_1)
         # print(output_2.shape)
-        output = self.l2(output_2)
+        output = self.l3(output_2)
+        # print(output.shape)
         return output
 
-def train_model(train_dataset: pd.DataFrame, 
-                test_dataset: pd.DataFrame,
+def train_model(training_loader: DataLoader, 
+                testing_loader: DataLoader,
+                NUM_LABELS: int,
                 MAX_LEN: int = 200,
-                TRAIN_BATCH_SIZE: int = 8,
-                VALID_BATCH_SIZE: int = 4,
                 EPOCHS: int = 1,
                 LEARNING_RATE: float = 1e-05,
                 TRAIN_SIZE: float = 0.8,
-                NUM_LABELS: int = None,
-                THRESHOLD: float = 0.5,
-                FREEZE_BERT: bool = True
+                THRESHOLD: float = None,
+                FREEZE: bool = True
     ) -> BERTClass:
     """
     Main driver function to train the BERT model.
-
-    Assumes that the dataframe has the following columns:
-        - body: The body of the document.     (preprocessed, not tokenized, not padded)
-        - topics: The topics of the document. (multi-label, binarized format)
     """
-
-    if NUM_LABELS is None:
-        NUM_LABELS = train_dataset["topics"].shape[1]
-        print("Inferred NUM_LABELS from dataframe as: ", NUM_LABELS)
 
     model = BERTClass(NUM_LABELS)
     model.to(device)
 
-    if FREEZE_BERT:
+    if FREEZE:
         model = freeze_bert(model)
         print("BERT model frozen.")
-
-    tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
-
-    print("TRAIN Dataset: {}".format(train_dataset.shape))
-    print("TEST Dataset: {}".format(test_dataset.shape))
-
-    training_set = CustomDataset(train_dataset, tokenizer, MAX_LEN)
-    testing_set  = CustomDataset(test_dataset, tokenizer, MAX_LEN)
-
-    train_params = {'batch_size': TRAIN_BATCH_SIZE,
-                'shuffle': True,
-                'num_workers': 0
-                }
-
-    test_params = {'batch_size': VALID_BATCH_SIZE,
-                    'shuffle': False,
-                    'num_workers': 0
-                    }
-
-    training_loader = DataLoader(training_set, **train_params)
-    testing_loader = DataLoader(testing_set, **test_params)
 
     def train(epoch):
         model.train()
@@ -144,25 +110,30 @@ def train_model(train_dataset: pd.DataFrame,
     for epoch in range(EPOCHS):
         print(f"Epoch {epoch}...")
         train(epoch)
-
+        if threshold == None:
+            candidate_thresholds = [0.1 + 0.05*i for i in range(1, 6)]
+        else:
+            candidate_thresholds = [threshold]
         outputs, targets = validation(epoch)
-        outputs = np.array(outputs) >= THRESHOLD
-        print("Number of labels predicted:", np.sum(outputs))
-        accuracy = metrics.accuracy_score(targets, outputs)
-        f1_score_micro = metrics.f1_score(targets, outputs, average='micro', zero_division=np.nan)
-        f1_score_macro = metrics.f1_score(targets, outputs, average='macro', zero_division=np.nan)
-        clf_report = metrics.classification_report(targets, outputs, zero_division=np.nan)
-        print(f"Validation Accuracy Score = {accuracy}")
-        
-        try: 
-            hs = hamming_score(targets, outputs)
-            print(f"Validation Hamming Score = {hs}")
-        except:
-            pass
-        
-        print(f"Validation F1 Score (Micro) = {f1_score_micro}")
-        print(f"Validation F1 Score (Macro) = {f1_score_macro}")
-        print(clf_report)
+        for THRESHOLD in candidate_thresholds:
+            print("THRESHOLD:", threshold)    
+            outputs = np.array(outputs) >= THRESHOLD
+            print("Number of labels predicted:", np.sum(outputs))
+            accuracy = metrics.accuracy_score(targets, outputs)
+            f1_score_micro = metrics.f1_score(targets, outputs, average='micro', zero_division=np.nan)
+            f1_score_macro = metrics.f1_score(targets, outputs, average='macro', zero_division=np.nan)
+            # clf_report = metrics.classification_report(targets, outputs, zero_division=np.nan)
+            print(f"Validation Accuracy Score = {accuracy}")
+            
+            try: 
+                hs = hamming_score(targets, outputs)
+                print(f"Validation Hamming Score = {hs}")
+            except:
+                pass
+            
+            print(f"Validation F1 Score (Micro) = {f1_score_micro}")
+            print(f"Validation F1 Score (Macro) = {f1_score_macro}")
+            # print(clf_report)
 
         torch.save(model.state_dict(), f"checkpoints/BERT-cased-{epoch}")
 

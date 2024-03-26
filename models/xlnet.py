@@ -2,7 +2,6 @@ from transformers import XLNetTokenizer, XLNetModel
 from sklearn import metrics
 import torch
 from torch.utils.data import DataLoader
-from .helpers import CustomDataset
 from .helpers import freeze_model as freeze_xlnet
 import pandas as pd
 import numpy as np
@@ -12,7 +11,7 @@ from sklearn.model_selection import train_test_split
 device = 'cuda' if cuda.is_available() else 'cpu'
 
 """
-This file is used to train a BERT model on the Reuters dataset.
+This file is used to train a XLNet model on the Reuters dataset.
 
 The model will perform multi-label classification, 
 predicting the topics of each document.
@@ -38,59 +37,26 @@ class XLNetClass(torch.nn.Module):
         # print(output.shape)
         return output
 
-def train_model(df: pd.DataFrame, 
+def train_model(training_loader: DataLoader, 
+                testing_loader: DataLoader,
+                NUM_LABELS: int,
                 MAX_LEN: int = 200,
-                TRAIN_BATCH_SIZE: int = 8,
-                VALID_BATCH_SIZE: int = 4,
                 EPOCHS: int = 1,
                 LEARNING_RATE: float = 1e-05,
                 TRAIN_SIZE: float = 0.8,
-                NUM_LABELS: int = None,
-                FREEZE_XLNET: bool = True
+                THRESHOLD: float = None,
+                FREEZE: bool = True
     ) -> XLNetClass:
     """
-    Main driver function to train the BERT model.
-
-    Assumes that the dataframe has the following columns:
-        - body: The body of the document.     (preprocessed, not tokenized, not padded)
-        - topics: The topics of the document. (multi-label, binarized format)
+    Main driver function to train the XLNet model.
     """
-
-    if NUM_LABELS is None:
-        NUM_LABELS = df["topics"].shape[1]
-        print("Inferred NUM_LABELS from dataframe as: ", NUM_LABELS)
 
     model = XLNetClass(NUM_LABELS)
     model.to(device)
 
-    if FREEZE_XLNET:
+    if FREEZE:
         model = freeze_xlnet(model)
         print("XLNet model frozen.")
-
-    tokenizer = XLNetTokenizer.from_pretrained('xlnet-base-cased')
-
-    train_dataset, test_dataset = train_test_split(df, train_size=TRAIN_SIZE, random_state=42, stratify=df["topics"])
-
-
-    print("FULL Dataset: {}".format(df.shape))
-    print("TRAIN Dataset: {}".format(train_dataset.shape))
-    print("TEST Dataset: {}".format(test_dataset.shape))
-
-    training_set = CustomDataset(train_dataset, tokenizer, MAX_LEN)
-    testing_set = CustomDataset(test_dataset, tokenizer, MAX_LEN)
-
-    train_params = {'batch_size': TRAIN_BATCH_SIZE,
-                'shuffle': True,
-                'num_workers': 0
-                }
-
-    test_params = {'batch_size': VALID_BATCH_SIZE,
-                    'shuffle': True,
-                    'num_workers': 0
-                    }
-
-    training_loader = DataLoader(training_set, **train_params)
-    testing_loader = DataLoader(testing_set, **test_params)
 
     def train(epoch):
         model.train()
@@ -102,16 +68,17 @@ def train_model(df: pd.DataFrame,
             ids = ids.squeeze(1)
             mask = mask.squeeze(1)
             token_type_ids = token_type_ids.squeeze(1)
-            # print("train output shape1", ids.shape, mask.shape, token_type_ids.shape, targets.shape)
             outputs = model(ids, mask, token_type_ids)
-            # print("train output shape2", outputs.shape)
-
+        
             optimizer.zero_grad()
+
+            # This should not modify anything but confirm the expectation
+            assert outputs.shape == targets.shape, "Mismatch in output and target shapes"
+
             loss = loss_fn(outputs, targets)
             if _%5000==0:
                 print(f'Epoch: {epoch}, Loss:  {loss.item()}')
             
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
@@ -137,23 +104,36 @@ def train_model(df: pd.DataFrame,
     
     def loss_fn(outputs, targets):
         return torch.nn.BCEWithLogitsLoss()(outputs, targets)
+
     optimizer = torch.optim.Adam(params =  model.parameters(), lr=LEARNING_RATE)
 
     for epoch in range(EPOCHS):
+        print(f"Epoch {epoch}...")
         train(epoch)
-
+        if threshold == None:
+            candidate_thresholds = [0.05*i for i in range(1, 9)]
+        else:
+            candidate_thresholds = [threshold]
         outputs, targets = validation(epoch)
-        outputs = np.array(outputs) >= 0.5
-        accuracy = metrics.accuracy_score(targets, outputs)
-        # balanced_accuracy = metrics.balanced_accuracy_score(targets, outputs)
-        f1_score_micro = metrics.f1_score(targets, outputs, average='micro', zero_division=np.nan)
-        f1_score_macro = metrics.f1_score(targets, outputs, average='macro', zero_division=np.nan)
-        clf_report = metrics.classification_report(targets, outputs, zero_division=np.nan)
-        print(f"Accuracy Score = {accuracy}")
-        # print(f"Balanced Accuracy Score = {balanced_accuracy}")
-        print(f"F1 Score (Micro) = {f1_score_micro}")
-        print(f"F1 Score (Macro) = {f1_score_macro}")
-        print(clf_report)
+        for THRESHOLD in candidate_thresholds:
+            print("THRESHOLD:", threshold)    
+            outputs = np.array(outputs) >= THRESHOLD
+            print("Number of labels predicted:", np.sum(outputs))
+            accuracy = metrics.accuracy_score(targets, outputs)
+            f1_score_micro = metrics.f1_score(targets, outputs, average='micro', zero_division=np.nan)
+            f1_score_macro = metrics.f1_score(targets, outputs, average='macro', zero_division=np.nan)
+            # clf_report = metrics.classification_report(targets, outputs, zero_division=np.nan)
+            print(f"Validation Accuracy Score = {accuracy}")
+            
+            try: 
+                hs = hamming_score(targets, outputs)
+                print(f"Validation Hamming Score = {hs}")
+            except:
+                pass
+            
+            print(f"Validation F1 Score (Micro) = {f1_score_micro}")
+            print(f"Validation F1 Score (Macro) = {f1_score_macro}")
+            # print(clf_report)
 
         torch.save(model.state_dict(), f"checkpoints/XLNet-cased-{epoch}")
 
