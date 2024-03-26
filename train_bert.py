@@ -9,12 +9,13 @@ import os
 import numpy as np
 
 if __name__ == "__main__":
+    torch.set_warn_always(False)
 
     print("Loading data...")
-    # data = loader.load_data("./data/")
-    f = 'data/{fn}.sgm'
-    files = [f.format(fn='reut2-00'+str(i)) for i in range(15)]
-    data = loader.load_files(files)
+    data = loader.load_data("./data/")
+    # f = 'data/{fn}.sgm'
+    # files = [f.format(fn='reut2-00'+str(i)) for i in range(15)]
+    # data = loader.load_files(files)
     print(f"Loaded {len(data)} documents.")
 
     df = pd.DataFrame(data)
@@ -26,14 +27,13 @@ if __name__ == "__main__":
     df = df.drop("title", axis=1)
 
     num_appearances = df["topics"].value_counts()
-    topics_to_keep = num_appearances[num_appearances > 3].index
+    topics_to_keep = num_appearances[num_appearances > 10].index
     old_len = len(df.index)
     df = df[df["topics"].isin(topics_to_keep)]
     new_len = len(df.index)
     print(f"Filtered {old_len - new_len} records.")
-    train_dataset, test_dataset = train_test_split(df, train_size=0.7, random_state=42, shuffle=True, stratify=df["topics"])
+    train_dataset, test_dataset = train_test_split(df, train_size=0.75, random_state=42, shuffle=True, stratify=df["topics"])
 
-    print(df.head())
 
     # load all the topics
     mlb = MultiLabelBinarizer()
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     TRAIN_BATCH_SIZE = 256
     VALID_BATCH_SIZE = 256
     EPOCHS = 3
-    LEARNING_RATE = 1e-05
+    LEARNING_RATE = 3e-04
     NUM_LABELS = len(mlb.classes_)
 
     print("Training model...")

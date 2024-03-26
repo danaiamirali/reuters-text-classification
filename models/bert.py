@@ -27,16 +27,15 @@ class BERTClass(torch.nn.Module):
     def __init__(self, NUM_LABELS):
         super(BERTClass, self).__init__()
         self.l1 = BertModel.from_pretrained('bert-base-cased')
-        self.l2 = torch.nn.Dropout(0.3)
-        self.l3 = torch.nn.Linear(768, NUM_LABELS)
+        self.dropout = torch.nn.Dropout(0.3)
+        self.l2 = torch.nn.Linear(768, NUM_LABELS)
     
     def forward(self, ids, mask, token_type_ids):
         _, output_1= self.l1(ids, attention_mask = mask, token_type_ids = token_type_ids, return_dict=False)
         # print(output_1.shape)
-        output_2 = self.l2(output_1)
+        output_2 = self.dropout(output_1)
         # print(output_2.shape)
-        output = self.l3(output_2)
-        # print(output.shape)
+        output = self.l2(output_2)
         return output
 
 def train_model(train_dataset: pd.DataFrame, 
@@ -48,6 +47,7 @@ def train_model(train_dataset: pd.DataFrame,
                 LEARNING_RATE: float = 1e-05,
                 TRAIN_SIZE: float = 0.8,
                 NUM_LABELS: int = None,
+                THRESHOLD: float = 0.5,
                 FREEZE_BERT: bool = True
     ) -> BERTClass:
     """
@@ -106,9 +106,6 @@ def train_model(train_dataset: pd.DataFrame,
         
             optimizer.zero_grad()
 
-            # print(f"Output shape: {outputs.shape}")
-            # print(f"Target shape: {targets.shape}")
-
             # This should not modify anything but confirm the expectation
             assert outputs.shape == targets.shape, "Mismatch in output and target shapes"
 
@@ -149,7 +146,7 @@ def train_model(train_dataset: pd.DataFrame,
         train(epoch)
 
         outputs, targets = validation(epoch)
-        outputs = np.array(outputs) >= 0.5
+        outputs = np.array(outputs) >= THRESHOLD
         accuracy = metrics.accuracy_score(targets, outputs)
         # balanced_accuracy = metrics.balanced_accuracy_score(targets, outputs)
         f1_score_micro = metrics.f1_score(targets, outputs, average='micro', zero_division=np.nan)
