@@ -110,10 +110,10 @@ def train_model(training_loader: DataLoader,
     for epoch in range(EPOCHS):
         print(f"Epoch {epoch}...")
         train(epoch)
-        if threshold == None:
+        if THRESHOLD == None:
             candidate_thresholds = [0.1 + 0.05*i for i in range(1, 6)]
         else:
-            candidate_thresholds = [threshold]
+            candidate_thresholds = [THRESHOLD]
         outputs, targets = validation(epoch)
         for THRESHOLD in candidate_thresholds:
             print("THRESHOLD:", threshold)    
