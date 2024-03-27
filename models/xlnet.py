@@ -116,7 +116,7 @@ def train_model(training_loader: DataLoader,
             candidate_thresholds = [THRESHOLD]
         outputs, targets = validation(epoch)
         for THRESHOLD in candidate_thresholds:
-            print("THRESHOLD:", threshold)    
+            print("THRESHOLD:", THRESHOLD)    
             outputs = np.array(outputs) >= THRESHOLD
             print("Number of labels predicted:", np.sum(outputs))
             accuracy = metrics.accuracy_score(targets, outputs)
