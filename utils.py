@@ -9,8 +9,9 @@ import re
 import string
 import nltk
 from nltk.corpus import stopwords
+import numpy as np
 
-nltk.download("stopwords")
+nltk.download("stopwords", quiet=True)
 
 import threading
 
@@ -165,6 +166,85 @@ class loader:
             print(f"Error reading file: {file}")
             return None
     
+def find_optimal_thresholds(targets: np.ndarray, outputs: np.ndarray, metric_func, candidate_thresholds, num_labels):
+    optimal_thresholds = []
+
+    if not isinstance(targets, np.ndarray):
+        targets = np.array(targets)
+    if not isinstance(outputs, np.ndarray):
+        outputs = np.array(outputs)
+    
+    for label_idx in range(num_labels):
+        best_threshold = 0
+        best_metric = float('-inf')
+        
+        for threshold in candidate_thresholds:
+            # Apply threshold to specific label
+            adjusted_outputs = outputs[:, label_idx] >= threshold
+            metric = metric_func(targets[:, label_idx], adjusted_outputs)
+            
+            if metric > best_metric:
+                best_metric = metric
+                best_threshold = threshold
+                
+        optimal_thresholds.append(best_threshold)
+    
+    return optimal_thresholds
+
+import numpy as np
+from sklearn import metrics 
+
+def freeze_model(model):
+    for param in model.l1.parameters():
+        param.requires_grad = False
+
+    return model
+
+def freeze_layers(model, num_layers):
+    for i in range(num_layers):
+        for param in model.l1.encoder.layer[i].parameters():
+            param.requires_grad = False
+
+    return model
+
+def eval_metrics(targets, outputs, thresholds: list):
+    # Ensure targets and outputs are numpy arrays for element-wise operations
+    targets = np.array(targets)
+    outputs = np.array(outputs)
+
+    # Apply per-label thresholding
+    # Assuming outputs and thresholds are appropriately aligned
+    for i, threshold in enumerate(thresholds):
+        outputs[:, i] = outputs[:, i] >= threshold
+    
+    # Calculate metrics after thresholding
+    accuracy = metrics.accuracy_score(targets, outputs)
+    hamming_loss = metrics.hamming_loss(targets, outputs)
+    f1_score_micro = metrics.f1_score(targets, outputs, average='micro', zero_division=np.nan)
+    f1_score_macro = metrics.f1_score(targets, outputs, average='macro', zero_division=np.nan)
+    clf_report = metrics.classification_report(targets, outputs, zero_division=np.nan)
+
+    # Print overall metrics
+    print(f"Validation Accuracy Score = {accuracy}")
+    print(f"Validation Hamming Loss = {hamming_loss}")
+    print(f"Validation F1 Score (Micro) = {f1_score_micro}")
+    print(f"Validation F1 Score (Macro) = {f1_score_macro}")
+    print(clf_report)
+
+    # Debugging: Write comparison of targets and outputs to file
+    with open("debug-log.txt", "w") as log_file:
+        log_file.write("Index, Target, Output, Subset Accuracy, Real Accuracy (%)\n")
+        for index, (target_row, output_row) in enumerate(zip(targets, outputs)):
+            # Here, the comparison is row-wise (per example, not per label)
+            correct = np.array_equal(target_row, output_row)
+            
+            # Calculate subset accuracy
+            subset_accuracy = (target_row == output_row).sum() / len(target_row)
+            is_correct = 1 if correct else 0
+            # Convert arrays to strings for logging
+            target_str = np.array2string(target_row, separator=',')
+            output_str = np.array2string(output_row, separator=',')
+            log_file.write(f"{index}, {target_str}, {output_str}, {is_correct}, {subset_accuracy:.2f}%\n")
 
 
 def config(attr):
