@@ -1,20 +1,15 @@
-import pandas as pd
-from utils import loader
 from models import bert
-from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.model_selection import train_test_split
 import torch
 import os
-import numpy as np
 from dataset import get_train_test_loaders
 
 if __name__ == "__main__":
     torch.set_warn_always(False)
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
 
     train_loader, test_loader, num_labels = get_train_test_loaders("bert")
 
-    EPOCHS=3
-
+    EPOCHS=15
     print("Training model...")
     if not os.path.exists("checkpoints"):
         os.makedirs("checkpoints")
@@ -22,7 +17,7 @@ if __name__ == "__main__":
                               test_loader, 
                               num_labels,
                               EPOCHS=EPOCHS,
-                              TRAIN_SIZE=0.7,
+                              TRAIN_SIZE=0.75,
                               FREEZE=True
                             )
     print("Model trained.")

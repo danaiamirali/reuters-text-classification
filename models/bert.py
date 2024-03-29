@@ -2,7 +2,7 @@ from transformers import BertTokenizer, BertModel
 from sklearn import metrics
 import torch
 from torch.utils.data import DataLoader
-from utils import freeze_model as freeze_bert
+from utils import freeze_layers as freeze_bert
 from utils import eval_metrics, find_optimal_thresholds
 import pandas as pd
 import numpy as np
@@ -38,9 +38,9 @@ class BERTClass(torch.nn.Module):
 def train_model(training_loader: DataLoader, 
                 testing_loader: DataLoader,
                 NUM_LABELS: int,
-                MAX_LEN: int = 200,
+                MAX_LEN: int = 512,
                 EPOCHS: int = 1,
-                LEARNING_RATE: float = 1e-05,
+                LEARNING_RATE: float = 1e-04,
                 TRAIN_SIZE: float = 0.8,
                 FREEZE: bool = True
     ) -> BERTClass:
@@ -52,7 +52,7 @@ def train_model(training_loader: DataLoader,
     model.to(device)
 
     if FREEZE:
-        model = freeze_bert(model)
+        model = freeze_bert(model, 2)
         print("BERT model frozen.")
 
     def train(epoch):
@@ -106,19 +106,27 @@ def train_model(training_loader: DataLoader,
     for epoch in range(EPOCHS):
         print(f"Epoch {epoch}...")
         train(epoch)
+
+
         candidate_thresholds = [0 + 0.0125 * i for i in range(70)]
         outputs, targets = validation(epoch)
         optimal_thresholds = find_optimal_thresholds(targets, 
                                                      outputs, 
-                                                     # lambda x, y : metrics.f1_score(x, y, average="macro", zero_division=np.nan), 
-                                                     lambda x, y : (x == y).sum() / len(x),
+                                                     lambda x, y : metrics.f1_score(x, y, average="macro", zero_division=np.nan), 
+                                                    #  lambda x, y : (x == y).sum() / len(x),
                                                      candidate_thresholds, 
                                                      NUM_LABELS)
 
         for num, threshold in enumerate(optimal_thresholds, 0):
             print(f"Label {num} : Threshold = {threshold}")
 
-        print("<--------------------------->")
+        print("---- Validation Metrics ----")
+        try:
+            loss = loss_fn(np.array(outputs), np.array(targets))
+            print(f"Validation Loss: {loss}")
+        except:
+            pass
+        
         eval_metrics(targets, outputs, optimal_thresholds)
 
         torch.save(model.state_dict(), f"checkpoints/BERT-cased-{epoch}")
