@@ -1,13 +1,10 @@
-from transformers import BertTokenizer, BertModel
+from transformers import BertModel
 from sklearn import metrics
 import torch
 from torch.utils.data import DataLoader
-from utils import freeze_layers as freeze_bert
-from utils import eval_metrics, find_optimal_thresholds
-import pandas as pd
+from train_common import freeze_layers, eval_metrics, find_optimal_thresholds
 import numpy as np
 from torch import cuda
-from sklearn.model_selection import train_test_split
 
 device = 'cuda' if cuda.is_available() else 'cpu'
 
@@ -37,23 +34,21 @@ class BERTClass(torch.nn.Module):
 
 def train_model(training_loader: DataLoader, 
                 testing_loader: DataLoader,
-                NUM_LABELS: int,
-                MAX_LEN: int = 512,
-                EPOCHS: int = 1,
-                LEARNING_RATE: float = 1e-04,
-                TRAIN_SIZE: float = 0.8,
-                FREEZE: bool = True
+                num_labels: int,
+                epochs: int = 1,
+                learning_rate: float = 1e-04,
+                freeze_num: int = 1,
+                print_metrics: bool = True,
+                print_thresholds: bool = True
     ) -> BERTClass:
     """
     Main driver function to train the BERT model.
     """
 
-    model = BERTClass(NUM_LABELS)
+    model = BERTClass(num_labels)
     model.to(device)
 
-    if FREEZE:
-        model = freeze_bert(model, 2)
-        print("BERT model frozen.")
+    model = freeze_layers(model, freeze_num)
 
     def train(epoch):
         model.train()
@@ -73,8 +68,9 @@ def train_model(training_loader: DataLoader,
             assert outputs.shape == targets.shape, "Mismatch in output and target shapes"
 
             loss = loss_fn(outputs, targets)
-            if _%5000==0:
-                print(f'Epoch: {epoch}, Loss:  {loss.item()}')
+            if print_metrics:
+                if _%5000==0:
+                    print(f'Epoch: {epoch}, Loss:  {loss.item()}')
             
             loss.backward()
             optimizer.step()
@@ -101,33 +97,27 @@ def train_model(training_loader: DataLoader,
     def loss_fn(outputs, targets):
         return torch.nn.BCEWithLogitsLoss()(outputs, targets)
 
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=LEARNING_RATE)
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate)
 
-    for epoch in range(EPOCHS):
+    for epoch in range(epochs):
         print(f"Epoch {epoch}...")
         train(epoch)
-
 
         candidate_thresholds = [0 + 0.0125 * i for i in range(70)]
         outputs, targets = validation(epoch)
         optimal_thresholds = find_optimal_thresholds(targets, 
                                                      outputs, 
                                                      lambda x, y : metrics.f1_score(x, y, average="macro", zero_division=np.nan), 
-                                                    #  lambda x, y : (x == y).sum() / len(x),
                                                      candidate_thresholds, 
-                                                     NUM_LABELS)
+                                                     num_labels)
 
-        for num, threshold in enumerate(optimal_thresholds, 0):
-            print(f"Label {num} : Threshold = {threshold}")
+        if print_thresholds:
+            for num, threshold in enumerate(optimal_thresholds, 0):
+                print(f"Label {num} : Threshold = {threshold}")
 
-        print("---- Validation Metrics ----")
-        try:
-            loss = loss_fn(np.array(outputs), np.array(targets))
-            print(f"Validation Loss: {loss}")
-        except:
-            pass
-        
-        eval_metrics(targets, outputs, optimal_thresholds)
+        if print_metrics:
+            print("---- Validation Metrics ----")
+            eval_metrics(targets, outputs, optimal_thresholds)
 
         torch.save(model.state_dict(), f"checkpoints/BERT-cased-{epoch}")
 
