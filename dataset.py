@@ -235,8 +235,9 @@ def get_train_test_loaders(
     split: float = 0.75,
     filter: bool = True,
     filter_threshold: int = 10,
-    num_files: int = None
-) -> tuple[DataLoader, DataLoader, int]:
+    num_files: int = None,
+    get_weights: bool = False
+) -> tuple[DataLoader, DataLoader, int] | tuple[DataLoader, DataLoader, int, np.ndarray]:
     print("Loading data...")
     data_path = config("dataset_path")
     if num_files == None:
@@ -284,4 +285,17 @@ def get_train_test_loaders(
     training_loader = DataLoader(training_set, **train_params)
     testing_loader = DataLoader(testing_set, **test_params)
 
+    if get_weights:
+        target_matrix = np.matrix(np.concatenate((train_topics, test_topics), axis=0))
+        # print(target_matrix.shape)
+        weights = np.sum(target_matrix, axis=1)[0].flatten() 
+        # print(weights.shape)
+        weights[weights == 0] = 1
+        weights = 1 / weights
+        weights = weights / weights.sum()
+
+        # print(weights)
+
+        return training_loader, testing_loader, len(topics), torch.Tensor(weights)
+    
     return training_loader, testing_loader, len(topics)

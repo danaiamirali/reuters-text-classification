@@ -8,7 +8,7 @@ if __name__ == "__main__":
     torch.set_warn_always(False)
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
 
-    train_loader, test_loader, num_labels = get_train_test_loaders("bert", num_files=2)
+    train_loader, test_loader, num_labels, weights = get_train_test_loaders("bert", num_files=2, get_weights=True)
 
     EPOCHS = config("train.epochs")
     lr = config("train.lr")
@@ -20,7 +20,8 @@ if __name__ == "__main__":
                               num_labels,
                               epochs=EPOCHS,
                               freeze_num=3,
-                              learning_rate=lr
+                              learning_rate=lr,
+                              weights=weights
                             )
     print("Model trained.")
 

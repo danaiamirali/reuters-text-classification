@@ -39,7 +39,8 @@ def train_model(training_loader: DataLoader,
                 learning_rate: float = 1e-04,
                 freeze_num: int = 1,
                 print_metrics: bool = True,
-                print_thresholds: bool = True
+                print_thresholds: bool = True,
+                weights: np.ndarray = None
     ) -> BERTClass:
     """
     Main driver function to train the BERT model.
@@ -67,7 +68,7 @@ def train_model(training_loader: DataLoader,
             # This should not modify anything but confirm the expectation
             assert outputs.shape == targets.shape, "Mismatch in output and target shapes"
 
-            loss = loss_fn(outputs, targets, compute_class_weights(targets))
+            loss = loss_fn(outputs, targets, weights)
             if print_metrics:
                 if _%5000==0:
                     print(f'Epoch: {epoch}, Loss:  {loss.item()}')
@@ -94,16 +95,10 @@ def train_model(training_loader: DataLoader,
                 fin_outputs.extend(torch.sigmoid(outputs).cpu().detach().numpy().tolist())
         return fin_outputs, fin_targets
     
-    # func to compute inverse class frequency weights given a set of labels
-    def compute_class_weights(labels: torch.Tensor | np.ndarray):
-        weights = np.bincount(labels.flatten().astype(int))
-        weights[weights == 0] = 1
-        weights = 1 / weights
-        weights = weights / weights.sum()
-        return torch.Tensor(weights)
-    
     def loss_fn(outputs, targets, weights: torch.Tensor = None):
-        assert outputs.shape == weights.shape, "Weights of incorrect shape"
+        print(f"Outputs shape: {outputs.shape}")
+        print(f"Weights shape: {weights.shape}")
+        # assert outputs[0].flatten().shape == weights.flatten().shape, "Weights of incorrect shape"
         return torch.nn.BCEWithLogitsLoss(weight=weights)(outputs, targets)
 
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate)
