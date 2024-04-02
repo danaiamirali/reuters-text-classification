@@ -1,30 +1,27 @@
-import pandas as pd
-from utils import loader
 from models import xlnet
-from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.model_selection import train_test_split
 import torch
 import os
-import numpy as np
+from utils import config
 from dataset import get_train_test_loaders
 
 if __name__ == "__main__":
     torch.set_warn_always(False)
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
 
-    train_loader, test_loader, num_labels = get_train_test_loaders("xlnet", num_files=4)
+    train_loader, test_loader, num_labels, weights = get_train_test_loaders("xlnet", num_files=2, get_weights=True)
 
-
-    EPOCHS=3
-
+    EPOCHS = config("train.epochs")
+    lr = config("train.lr")
     print("Training model...")
     if not os.path.exists("checkpoints"):
         os.makedirs("checkpoints")
     model = xlnet.train_model(train_loader, 
                               test_loader, 
                               num_labels,
-                              EPOCHS=EPOCHS,
-                              TRAIN_SIZE=0.7,
-                              FREEZE=True
+                              epochs=EPOCHS,
+                              freeze_num=3,
+                              learning_rate=lr,
+                              weights=weights
                             )
     print("Model trained.")
 

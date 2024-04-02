@@ -30,7 +30,7 @@ def find_optimal_thresholds(targets: np.ndarray, outputs: np.ndarray, metric_fun
     
     return optimal_thresholds
 
-def freeze_layers(model, n: int = 1):
+def freeze_layers(model, model_name="bert", n: int = 1):
     """
     Helper function to freeze everything but the last num_layers of a transformer model.
 
@@ -40,11 +40,19 @@ def freeze_layers(model, n: int = 1):
     for param in model.parameters():
         param.requires_grad = False
 
-    # Unfreeze the last n layers of the BERT model
-    for i, layer in enumerate(model.l1.encoder.layer[-n:], 1):
-        for name, param in layer.named_parameters():
-            print(f"Unfreezing {name}")
-            param.requires_grad = True
+    if model_name == "bert":
+        # Unfreeze the last n layers of the BERT model
+        for i, layer in enumerate(model.l1.encoder.layer[-n:], 1):
+            for name, param in layer.named_parameters():
+                print(f"Unfreezing {name}")
+                param.requires_grad = True
+    elif model_name == "xlnet":
+        # Unfreeze the last n layers of the XLNet model
+        print(model)
+        for i, layer in enumerate(model.l1.layer[-n:], 1):
+            for name, param in layer.named_parameters():
+                print(f"Unfreezing {name}")
+                param.requires_grad = True
 
     # Unfreeze all the parameters in the dropout and the last linear layers
     for param in model.l2.parameters():

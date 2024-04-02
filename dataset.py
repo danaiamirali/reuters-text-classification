@@ -172,12 +172,13 @@ class Loader:
 
 class CustomDataset(Dataset):
 
-    def __init__(self, dataframe, tokenizer, max_len):
+    def __init__(self, dataframe, tokenizer, max_len, model="bert"):
         self.tokenizer = tokenizer
         self.data = dataframe
         self.body = dataframe.body
         self.targets = np.array([topic for topic in dataframe.topics])
         self.max_len = max_len
+        self.model = model
 
     def __len__(self):
         return len(self.body)
@@ -186,17 +187,27 @@ class CustomDataset(Dataset):
         body = str(self.body.iloc[index])
         body = " ".join(body.split())
 
-        inputs = self.tokenizer.encode_plus(
-            body,
-            None,
-            add_special_tokens=True,
-            max_length=self.max_len,
-            truncation=True,
-            padding="max_length",
-            return_token_type_ids=True,
-            return_attention_mask=True,
-            return_tensors='pt',
-        )
+        if self.model == "bert":
+            inputs = self.tokenizer.encode_plus(
+                body,
+                None,
+                add_special_tokens=True,
+                max_length=self.max_len,
+                truncation=True,
+                padding="max_length",
+                return_token_type_ids=True,
+                return_attention_mask=True,
+                return_tensors='pt',
+            )
+        elif self.model == "xlnet":
+            inputs = self.tokenizer.encode_plus(
+                body,
+                add_special_tokens=True,
+                max_length=None,
+                return_token_type_ids=True,
+                return_attention_mask=True,
+                return_tensors='pt',
+            )
 
         ids = inputs['input_ids']
         mask = inputs['attention_mask']
