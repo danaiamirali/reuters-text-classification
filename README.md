@@ -4,24 +4,28 @@ We use the [Reuters-21578 Text Categorization Collection](https://kdd.ics.uci.ed
 
 The dataset is imbalanced, and contains data of variable length.
 
-Distribution of # Tokens in News Articles:
-Average number of tokens: 121.95260454068386
-Standard deviation: 109.25442865578694
-Maximum: 2976
-Minimum: 4
+Distribution of Tokens (using `bert-base-cased`):
+| Metric                 | Value                 |
+|------------------------|-----------------------|
+| Average | 121.95                |
+| Standard deviation      | 109.25                |
+| Maximum                | 2976                  |
+| Minimum                | 4                     |
 
-Topic Distribution:
-[earn]                            3687
-[acq]                             1994
-[crude]                            326
-[trade]                            307
-[money-fx]                         243
-                                  ... 
-[veg-oil, sun-oil, cotton-oil]       1
-[veg-oil, coconut-oil]               1
-[l-cattle]                           1
-[livestock, carcass, hog]            1
-[ipi, gnp, grain]                    1
+Distribution of Topics:
+| Topic                         | Count |
+|-------------------------------|-------|
+| [earn]                        | 3687  |
+| [acq]                         | 1994  |
+| [crude]                       | 326   |
+| [trade]                       | 307   |
+| [money-fx]                    | 243   |
+| ... | ... |
+| [veg-oil, sun-oil, cotton-oil]| 1     |
+| [veg-oil, coconut-oil]        | 1     |
+| [l-cattle]                    | 1     |
+| [livestock, carcass, hog]     | 1     |
+| [ipi, gnp, grain]             | 1     |
 
 ## Results
 ### BERT
