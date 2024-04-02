@@ -9,7 +9,7 @@ from torch import cuda
 device = 'cuda' if cuda.is_available() else 'cpu'
 
 """
-This file is used to train a BERT model on the Reuters dataset.
+This file is used to train a XLNet model on the Reuters dataset.
 
 The model will perform multi-label classification, 
 predicting the topics of each document.
@@ -43,7 +43,7 @@ def train_model(training_loader: DataLoader,
                 weights: np.ndarray = None
     ) -> XLNetClass:
     """
-    Main driver function to train the BERT model.
+    Main driver function to train the XLNet model.
     """
 
     model = XLNetClass(num_labels)
