@@ -102,8 +102,8 @@ def train_model(training_loader: DataLoader,
         return fin_outputs, fin_targets
     
     def loss_fn(outputs, targets, weights: torch.Tensor = None):
-        print(f"Outputs shape: {outputs.shape}")
-        print(f"Weights shape: {weights.shape}")
+        # print(f"Outputs shape: {outputs.shape}")
+        # print(f"Weights shape: {weights.shape}")
         # assert outputs[0].flatten().shape == weights.flatten().shape, "Weights of incorrect shape"
         return torch.nn.BCEWithLogitsLoss(weight=weights)(outputs, targets)
 
