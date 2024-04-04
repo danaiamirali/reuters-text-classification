@@ -53,6 +53,8 @@ def train_model(training_loader: DataLoader,
 
     def train(epoch):
         model.train()
+        fin_targets=[]
+        fin_outputs=[]
         for _,data in enumerate(training_loader, 0):
             ids = data['ids'].to(device, dtype = torch.long)
             mask = data['mask'].to(device, dtype = torch.long)
@@ -75,6 +77,10 @@ def train_model(training_loader: DataLoader,
             
             loss.backward()
             optimizer.step()
+
+            fin_targets.extend(targets.cpu().detach().numpy().tolist())
+            fin_outputs.extend(torch.sigmoid(outputs).cpu().detach().numpy().tolist())
+        return fin_outputs, fin_targets
 
     def validation(epoch):
         model.eval()
@@ -102,12 +108,15 @@ def train_model(training_loader: DataLoader,
         return torch.nn.BCEWithLogitsLoss(weight=weights)(outputs, targets)
 
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate)
-
+    candidate_thresholds = [0 + 0.0125 * i for i in range(70)]
     for epoch in range(epochs):
         print(f"Epoch {epoch}...")
-        train(epoch)
-
-        candidate_thresholds = [0 + 0.0125 * i for i in range(70)]
+        outputs, targets = train(epoch)
+        optimal_train_thresholds = find_optimal_thresholds(targets,
+                                                           outputs,
+                                                           lambda x, y : metrics.f1_score(x, y, average="macro", zero_division=np.nan),
+                                                           candidate_thresholds,
+                                                           num_labels)
         outputs, targets = validation(epoch)
         optimal_thresholds = find_optimal_thresholds(targets, 
                                                      outputs, 
@@ -120,6 +129,8 @@ def train_model(training_loader: DataLoader,
                 print(f"Label {num} : Threshold = {threshold}")
 
         if print_metrics:
+            print("---- Training Metrics ----")
+            eval_metrics(targets, outputs, optimal_train_thresholds, stage="training")
             print("---- Validation Metrics ----")
             eval_metrics(targets, outputs, optimal_thresholds)
 
