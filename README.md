@@ -21,11 +21,6 @@ Distribution of Topics:
 | [trade]                       | 307   |
 | [money-fx]                    | 243   |
 | ... | ... |
-| [veg-oil, sun-oil, cotton-oil]| 1     |
-| [veg-oil, coconut-oil]        | 1     |
-| [l-cattle]                    | 1     |
-| [livestock, carcass, hog]     | 1     |
-| [ipi, gnp, grain]             | 1     |
 
 ## Results
 ### BERT
