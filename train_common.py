@@ -87,16 +87,16 @@ def eval_metrics(targets, outputs, thresholds: list):
     print(clf_report)
 
     # Debugging: Write comparison of targets and outputs to file
-    with open("debug-log.txt", "w") as log_file:
-        log_file.write("Index, Target, Output, Subset Accuracy, Real Accuracy (%)\n")
-        for index, (target_row, output_row) in enumerate(zip(targets, outputs)):
-            # Here, the comparison is row-wise (per example, not per label)
-            correct = np.array_equal(target_row, output_row)
+    # with open("debug-log.txt", "w") as log_file:
+    #     log_file.write("Index, Target, Output, Subset Accuracy, Real Accuracy (%)\n")
+    #     for index, (target_row, output_row) in enumerate(zip(targets, outputs)):
+    #         # Here, the comparison is row-wise (per example, not per label)
+    #         correct = np.array_equal(target_row, output_row)
             
-            # Calculate subset accuracy
-            subset_accuracy = (target_row == output_row).sum() / len(target_row)
-            is_correct = 1 if correct else 0
-            # Convert arrays to strings for logging
-            target_str = np.array2string(target_row, separator=',')
-            output_str = np.array2string(output_row, separator=',')
-            log_file.write(f"{index}, {target_str}, {output_str}, {is_correct}, {subset_accuracy:.2f}%\n")
+    #         # Calculate subset accuracy
+    #         subset_accuracy = (target_row == output_row).sum() / len(target_row)
+    #         is_correct = 1 if correct else 0
+    #         # Convert arrays to strings for logging
+    #         target_str = np.array2string(target_row, separator=',')
+    #         output_str = np.array2string(output_row, separator=',')
+    #         log_file.write(f"{index}, {target_str}, {output_str}, {is_correct}, {subset_accuracy:.2f}%\n")
