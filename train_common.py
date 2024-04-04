@@ -62,10 +62,12 @@ def freeze_layers(model, model_name="bert", n: int = 1):
 
     return model
 
-def eval_metrics(targets, outputs, thresholds: list):
+def eval_metrics(targets, outputs, thresholds: list, stage: str = "validation", full_report: bool = False):
     # Ensure targets and outputs are numpy arrays for element-wise operations
     targets = np.array(targets)
     outputs = np.array(outputs)
+
+    stage = stage.capitalize()
 
     # Apply per-label thresholding
     # Assuming outputs and thresholds are appropriately aligned
@@ -77,26 +79,27 @@ def eval_metrics(targets, outputs, thresholds: list):
     hamming_loss = metrics.hamming_loss(targets, outputs)
     f1_score_micro = metrics.f1_score(targets, outputs, average='micro', zero_division=np.nan)
     f1_score_macro = metrics.f1_score(targets, outputs, average='macro', zero_division=np.nan)
-    clf_report = metrics.classification_report(targets, outputs, zero_division=np.nan)
-
     # Print overall metrics
-    print(f"Validation Accuracy Score = {accuracy}")
-    print(f"Validation Hamming Loss = {hamming_loss}")
-    print(f"Validation F1 Score (Micro) = {f1_score_micro}")
-    print(f"Validation F1 Score (Macro) = {f1_score_macro}")
-    print(clf_report)
+    print(f"{stage} Accuracy Score = {accuracy}")
+    print(f"{stage} Hamming Loss = {hamming_loss}")
+    print(f"{stage} Micro-F1 = {f1_score_micro}")
+    print(f"{stage} Macro-F1 = {f1_score_macro}")
+    
+    if full_report:
+        clf_report = metrics.classification_report(targets, outputs, zero_division=np.nan)
+        print(clf_report)
 
     # Debugging: Write comparison of targets and outputs to file
-    with open("debug-log.txt", "w") as log_file:
-        log_file.write("Index, Target, Output, Subset Accuracy, Real Accuracy (%)\n")
-        for index, (target_row, output_row) in enumerate(zip(targets, outputs)):
-            # Here, the comparison is row-wise (per example, not per label)
-            correct = np.array_equal(target_row, output_row)
+    # with open("debug-log.txt", "w") as log_file:
+    #     log_file.write("Index, Target, Output, Subset Accuracy, Real Accuracy (%)\n")
+    #     for index, (target_row, output_row) in enumerate(zip(targets, outputs)):
+    #         # Here, the comparison is row-wise (per example, not per label)
+    #         correct = np.array_equal(target_row, output_row)
             
-            # Calculate subset accuracy
-            subset_accuracy = (target_row == output_row).sum() / len(target_row)
-            is_correct = 1 if correct else 0
-            # Convert arrays to strings for logging
-            target_str = np.array2string(target_row, separator=',')
-            output_str = np.array2string(output_row, separator=',')
-            log_file.write(f"{index}, {target_str}, {output_str}, {is_correct}, {subset_accuracy:.2f}%\n")
+    #         # Calculate subset accuracy
+    #         subset_accuracy = (target_row == output_row).sum() / len(target_row)
+    #         is_correct = 1 if correct else 0
+    #         # Convert arrays to strings for logging
+    #         target_str = np.array2string(target_row, separator=',')
+    #         output_str = np.array2string(output_row, separator=',')
+    #         log_file.write(f"{index}, {target_str}, {output_str}, {is_correct}, {subset_accuracy:.2f}%\n")

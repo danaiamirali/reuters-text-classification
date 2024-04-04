@@ -39,7 +39,7 @@ def train_model(training_loader: DataLoader,
                 learning_rate: float = 1e-04,
                 freeze_num: int = 1,
                 print_metrics: bool = True,
-                print_thresholds: bool = True,
+                print_thresholds: bool = False,
                 weights: np.ndarray = None
     ) -> BERTClass:
     """
@@ -53,6 +53,8 @@ def train_model(training_loader: DataLoader,
 
     def train(epoch):
         model.train()
+        fin_targets=[]
+        fin_outputs=[]
         for _,data in enumerate(training_loader, 0):
             ids = data['ids'].to(device, dtype = torch.long)
             mask = data['mask'].to(device, dtype = torch.long)
@@ -68,13 +70,16 @@ def train_model(training_loader: DataLoader,
             # This should not modify anything but confirm the expectation
             assert outputs.shape == targets.shape, "Mismatch in output and target shapes"
 
-            loss = loss_fn(outputs, targets, weights)
-            if print_metrics:
-                if _%5000==0:
-                    print(f'Epoch: {epoch}, Loss:  {loss.item()}')
+            loss = loss_fn(outputs, targets, weights)                   
             
             loss.backward()
             optimizer.step()
+
+            fin_targets.extend(targets.cpu().detach().numpy().tolist())
+            fin_outputs.extend(torch.sigmoid(outputs).cpu().detach().numpy().tolist())
+
+        print(f'Training Loss:  {loss.item()}')
+        return fin_outputs, fin_targets
 
     def validation(epoch):
         model.eval()
@@ -91,23 +96,29 @@ def train_model(training_loader: DataLoader,
                 token_type_ids = token_type_ids.squeeze(1)
                 # get model outputs
                 outputs = model(ids, mask, token_type_ids)
+                loss = loss_fn(outputs, targets, weights)
                 fin_targets.extend(targets.cpu().detach().numpy().tolist())
                 fin_outputs.extend(torch.sigmoid(outputs).cpu().detach().numpy().tolist())
+
+        print(f'Validation Loss:  {loss.item()}')
         return fin_outputs, fin_targets
     
     def loss_fn(outputs, targets, weights: torch.Tensor = None):
-        print(f"Outputs shape: {outputs.shape}")
-        print(f"Weights shape: {weights.shape}")
+        # print(f"Outputs shape: {outputs.shape}")
+        # print(f"Weights shape: {weights.shape}")
         # assert outputs[0].flatten().shape == weights.flatten().shape, "Weights of incorrect shape"
         return torch.nn.BCEWithLogitsLoss(weight=weights)(outputs, targets)
 
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate)
-
+    candidate_thresholds = [0 + 0.0125 * i for i in range(70)]
     for epoch in range(epochs):
         print(f"Epoch {epoch}...")
-        train(epoch)
-
-        candidate_thresholds = [0 + 0.0125 * i for i in range(70)]
+        outputs, targets = train(epoch)
+        optimal_train_thresholds = find_optimal_thresholds(targets,
+                                                           outputs,
+                                                           lambda x, y : metrics.f1_score(x, y, average="macro", zero_division=np.nan),
+                                                           candidate_thresholds,
+                                                           num_labels)
         outputs, targets = validation(epoch)
         optimal_thresholds = find_optimal_thresholds(targets, 
                                                      outputs, 
@@ -120,6 +131,8 @@ def train_model(training_loader: DataLoader,
                 print(f"Label {num} : Threshold = {threshold}")
 
         if print_metrics:
+            print("---- Training Metrics ----")
+            eval_metrics(targets, outputs, optimal_train_thresholds, stage="training")
             print("---- Validation Metrics ----")
             eval_metrics(targets, outputs, optimal_thresholds)
 
