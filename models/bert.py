@@ -39,7 +39,7 @@ def train_model(training_loader: DataLoader,
                 learning_rate: float = 1e-04,
                 freeze_num: int = 1,
                 print_metrics: bool = True,
-                print_thresholds: bool = True,
+                print_thresholds: bool = False,
                 weights: np.ndarray = None
     ) -> BERTClass:
     """
@@ -70,16 +70,15 @@ def train_model(training_loader: DataLoader,
             # This should not modify anything but confirm the expectation
             assert outputs.shape == targets.shape, "Mismatch in output and target shapes"
 
-            loss = loss_fn(outputs, targets, weights)
-            if print_metrics:
-                if _%5000==0:
-                    print(f'Epoch: {epoch}, Loss:  {loss.item()}')
+            loss = loss_fn(outputs, targets, weights)                   
             
             loss.backward()
             optimizer.step()
 
             fin_targets.extend(targets.cpu().detach().numpy().tolist())
             fin_outputs.extend(torch.sigmoid(outputs).cpu().detach().numpy().tolist())
+
+        print(f'Training Loss:  {loss.item()}')
         return fin_outputs, fin_targets
 
     def validation(epoch):
@@ -97,8 +96,11 @@ def train_model(training_loader: DataLoader,
                 token_type_ids = token_type_ids.squeeze(1)
                 # get model outputs
                 outputs = model(ids, mask, token_type_ids)
+                loss = loss_fn(outputs, targets, weights)
                 fin_targets.extend(targets.cpu().detach().numpy().tolist())
                 fin_outputs.extend(torch.sigmoid(outputs).cpu().detach().numpy().tolist())
+
+        print(f'Validation Loss:  {loss.item()}')
         return fin_outputs, fin_targets
     
     def loss_fn(outputs, targets, weights: torch.Tensor = None):

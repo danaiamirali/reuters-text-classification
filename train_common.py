@@ -82,8 +82,8 @@ def eval_metrics(targets, outputs, thresholds: list, stage: str = "validation", 
     # Print overall metrics
     print(f"{stage} Accuracy Score = {accuracy}")
     print(f"{stage} Hamming Loss = {hamming_loss}")
-    print(f"{stage} F1 Score (Micro) = {f1_score_micro}")
-    print(f"{stage} F1 Score (Macro) = {f1_score_macro}")
+    print(f"{stage} Micro-F1 = {f1_score_micro}")
+    print(f"{stage} Macro-F1 = {f1_score_macro}")
     
     if full_report:
         clf_report = metrics.classification_report(targets, outputs, zero_division=np.nan)
