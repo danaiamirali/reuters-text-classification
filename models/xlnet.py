@@ -49,7 +49,7 @@ def train_model(training_loader: DataLoader,
     model = XLNetClass(num_labels)
     model.to(device)
 
-    model = freeze_layers(model, freeze_num)
+    model = freeze_layers(model, "xlnet", freeze_num)
 
     def train(epoch):
         model.train()
