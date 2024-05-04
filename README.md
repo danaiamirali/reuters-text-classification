@@ -1,6 +1,6 @@
 # Reuters Text Classification
 
-We use the [Reuters-21578 Text Categorization Collection](https://kdd.ics.uci.edu/databases/reuters21578/reuters21578.html) to perform multi-label text classification with Transformer-based models. Given a Reuters news articles, we need to classify it into one or more "topic."
+We use the [Reuters-21578 Text Categorization Collection](https://kdd.ics.uci.edu/databases/reuters21578/reuters21578.html) to perform multi-label text classification with Transformer-based models. Given a Reuters news article, we need to classify it into one or more topic.
 
 The dataset is imbalanced, and contains data of variable length (as illustrated by the tables below). As such, we leverage methods like Inverse Class Frequency to address the dataset imbalance.
 
